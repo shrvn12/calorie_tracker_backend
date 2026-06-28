@@ -12,6 +12,29 @@ export const extractCaloriesFromText = async (description) => {
   logger.info({ description }, 'Extracting calories from text');
 
   // Call the modern SDK method from the default exported client instance
+
+  const nutritionSchema = {
+    type: "OBJECT",
+    properties: {
+      name: { type: "STRING" },
+      description: { type: "STRING" },
+      mealType: { 
+        type: "STRING", 
+        enum: ["BREAKFAST", "LUNCH", "DINNER", "SNACK"] 
+      },
+      calories: { type: "INTEGER" },
+      proteinG: { type: "INTEGER" },
+      carbsG: { type: "INTEGER" },
+      fatG: { type: "INTEGER" },
+      fiberG: { type: "INTEGER" },
+      sugarG: { type: "INTEGER" },
+      sodiumMg: { type: "INTEGER" },
+      confidence: { type: "STRING" },
+      notes: { type: "STRING" }
+    },
+    required: ["name", "description", "mealType", "calories", "proteinG", "carbsG", "fatG"]
+  };
+
   const response = await genAI.models.generateContent({
     model: AI_MODEL,
     contents: buildTextPrompt(description),
@@ -21,6 +44,7 @@ export const extractCaloriesFromText = async (description) => {
       maxOutputTokens: 2048,
       // Forces Gemini to output pure JSON without markdown code fences
       responseMimeType: "application/json", 
+      responseSchema: nutritionSchema
     },
   });
 

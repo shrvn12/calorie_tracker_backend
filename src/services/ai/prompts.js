@@ -13,6 +13,12 @@ Rules:
 - All numeric values must be numbers (not strings).
 - Calorie values must be realistic (e.g. an apple ≈ 95 kcal, not 500).
 
+CRITICAL NUTRITIONAL LIMITS:
+- All macro values (proteinG, carbsG, fatG, fiberG, sugarG) MUST be realistic single or double-digit integers representing grams per meal.
+- Never output an extreme long string of repeating digits or placeholder zeros (e.g., 20000000...).
+- If a nutrient value like sugar is zero or negligible, return 0.
+- Do not use exponential notation or infinite loops under any circumstance.
+
 Response schema (strict):
 {
   "name": "string — concise display name (e.g. 'Grilled Chicken Salad')",

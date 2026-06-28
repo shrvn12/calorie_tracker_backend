@@ -20,6 +20,29 @@ export const extractCaloriesFromImage = async (imageInput, mimeType = 'image/jpe
   const base64Image = imageBuffer.toString('base64');
 
   // Call the modern generateContent method
+
+  const nutritionSchema = {
+    type: "OBJECT",
+    properties: {
+      name: { type: "STRING" },
+      description: { type: "STRING" },
+      mealType: { 
+        type: "STRING", 
+        enum: ["BREAKFAST", "LUNCH", "DINNER", "SNACK"] 
+      },
+      calories: { type: "INTEGER" },
+      proteinG: { type: "INTEGER" },
+      carbsG: { type: "INTEGER" },
+      fatG: { type: "INTEGER" },
+      fiberG: { type: "INTEGER" },
+      sugarG: { type: "INTEGER" },
+      sodiumMg: { type: "INTEGER" },
+      confidence: { type: "STRING" },
+      notes: { type: "STRING" }
+    },
+    required: ["name", "description", "mealType", "calories", "proteinG", "carbsG", "fatG"]
+  };
+
   const response = await genAI.models.generateContent({
     model: AI_MODEL,
     contents: [
@@ -36,6 +59,7 @@ export const extractCaloriesFromImage = async (imageInput, mimeType = 'image/jpe
       temperature: 0.1,
       maxOutputTokens: 2048,
       responseMimeType: "application/json",
+      responseSchema: nutritionSchema
     },
   });
 
