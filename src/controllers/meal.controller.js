@@ -15,19 +15,19 @@ export const logMealFromText = asyncHandler(async (req, res) => {
   const nutrition = await extractCaloriesFromText(description);
 
   const meal = await mealRepo.create({
-    userId:      req.user.id,
-    name:        nutrition.name,
+    userId: req.user.id,
+    name: nutrition.name,
     description: nutrition.description,
-    mealType:    mealType ?? nutrition.mealType,
-    calories:    nutrition.calories,
-    proteinG:    nutrition.proteinG,
-    carbsG:      nutrition.carbsG,
-    fatG:        nutrition.fatG,
-    fiberG:      nutrition.fiberG,
-    sugarG:      nutrition.sugarG,
-    sodiumMg:    nutrition.sodiumMg,
+    mealType: mealType ?? nutrition.mealType,
+    calories: nutrition.calories,
+    proteinG: nutrition.proteinG,
+    carbsG: nutrition.carbsG,
+    fatG: nutrition.fatG,
+    fiberG: nutrition.fiberG,
+    sugarG: nutrition.sugarG,
+    sodiumMg: nutrition.sodiumMg,
     inputMethod: 'text',
-    aiRaw:       nutrition,
+    aiRaw: nutrition,
     ...(loggedAt && { loggedAt: new Date(loggedAt) }),
   });
 
@@ -46,30 +46,30 @@ export const logMealFromImage = asyncHandler(async (req, res) => {
     return sendError(res, { message: 'No image file provided', statusCode: 400 });
   }
 
-  const { path: localPath, mimetype } = req.file;
+  const { buffer, originalname, mimetype } = req.file;
   const { loggedAt } = req.body;
 
-  // Run AI analysis on the local temp file first
-  const nutrition = await extractCaloriesFromImage(localPath, mimetype);
+  // Run AI analysis on the image buffer
+  const nutrition = await extractCaloriesFromImage(buffer, mimetype);
 
-  // Upload to Supabase Storage (this also deletes the temp file)
-  const imageUrl = await uploadToSupabase(localPath, mimetype);
+  // Upload to Supabase Storage (no temp file on disk)
+  const imageUrl = await uploadToSupabase(buffer, originalname, mimetype);
 
   const meal = await mealRepo.create({
-    userId:      req.user.id,
-    name:        nutrition.name,
+    userId: req.user.id,
+    name: nutrition.name,
     description: nutrition.description,
-    mealType:    nutrition.mealType,
+    mealType: nutrition.mealType,
     imageUrl,
-    calories:    nutrition.calories,
-    proteinG:    nutrition.proteinG,
-    carbsG:      nutrition.carbsG,
-    fatG:        nutrition.fatG,
-    fiberG:      nutrition.fiberG,
-    sugarG:      nutrition.sugarG,
-    sodiumMg:    nutrition.sodiumMg,
+    calories: nutrition.calories,
+    proteinG: nutrition.proteinG,
+    carbsG: nutrition.carbsG,
+    fatG: nutrition.fatG,
+    fiberG: nutrition.fiberG,
+    sugarG: nutrition.sugarG,
+    sodiumMg: nutrition.sodiumMg,
     inputMethod: 'image',
-    aiRaw:       nutrition,
+    aiRaw: nutrition,
     ...(loggedAt && { loggedAt: new Date(loggedAt) }),
   });
 
@@ -90,8 +90,8 @@ export const getTodayMeals = asyncHandler(async (req, res) => {
     (acc, m) => ({
       calories: acc.calories + m.calories,
       proteinG: acc.proteinG + m.proteinG,
-      carbsG:   acc.carbsG   + m.carbsG,
-      fatG:     acc.fatG     + m.fatG,
+      carbsG: acc.carbsG + m.carbsG,
+      fatG: acc.fatG + m.fatG,
     }),
     { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 }
   );
@@ -107,7 +107,7 @@ export const getMealHistory = asyncHandler(async (req, res) => {
   const skip = (page - 1) * limit;
 
   const parsedStart = startDate ? fromDateString(startDate) : undefined;
-  const parsedEnd   = endDate   ? fromDateString(endDate)   : undefined;
+  const parsedEnd = endDate ? fromDateString(endDate) : undefined;
 
   const [meals, total] = await Promise.all([
     mealRepo.findHistoryByUser(req.user.id, { skip, take: limit, startDate: parsedStart, endDate: parsedEnd }),
