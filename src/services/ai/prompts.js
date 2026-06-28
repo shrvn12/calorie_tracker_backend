@@ -19,21 +19,6 @@ CRITICAL NUTRITIONAL LIMITS:
 - If a nutrient value like sugar is zero or negligible, return 0.
 - Do not use exponential notation or infinite loops under any circumstance.
 
-Response schema (strict):
-{
-  "name": "string — concise display name (e.g. 'Grilled Chicken Salad')",
-  "description": "string — brief description of what was identified",
-  "mealType": "BREAKFAST | LUNCH | DINNER | SNACK",
-  "calories": number,
-  "proteinG": number,
-  "carbsG": number,
-  "fatG": number,
-  "fiberG": number,
-  "sugarG": number,
-  "sodiumMg": number,
-  "confidence": "high | medium | low",
-  "notes": "string | null — any caveats, assumptions, or ranges"
-}
 `.trim();
 
 export const buildTextPrompt = (description) => `
