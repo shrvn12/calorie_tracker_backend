@@ -20,10 +20,12 @@ const app = express();
 
 // ── Security ──────────────────────────────────────────────────────────────────
 app.use(helmet());
-app.use(cors({
+const corsOptions = {
   origin: (process.env.ALLOWED_ORIGINS || '').split(',').map((o) => o.trim()),
   credentials: true,
-}));
+}
+console.log(corsOptions);
+app.use(cors(corsOptions));
 
 // ── Logging ───────────────────────────────────────────────────────────────────
 app.use(pinoHttp({ logger }));
