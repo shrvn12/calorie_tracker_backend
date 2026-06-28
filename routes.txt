@@ -1,0 +1,606 @@
+AI Calorie Tracker API Routes & Structures Reference
+=====================================================
+
+All API endpoints reside relative to the root URL (e.g. http://localhost:3000).
+
+Table of Contents:
+1. General Guidelines (Authentication & Headers, Standard Wrappers)
+2. Data Models (User, MealEntry, WaterLog, WeightLog)
+3. Auth Routes (/auth)
+4. User Routes (/users)
+5. Meal Routes (/meals)
+6. Water Routes (/water)
+7. Progress Routes (/weight, /calendar)
+8. AI Aggregation Routes (/dashboard)
+9. Utility / Health Routes (/health)
+
+-------------------------------------------------------------------------------
+1. GENERAL GUIDELINES
+-------------------------------------------------------------------------------
+
+### Authentication & Headers
+Most endpoints require authentication. To authenticate, include the JWT token 
+in the request header:
+  Authorization: Bearer <JWT_TOKEN>
+
+For content types:
+- Unless noted otherwise (e.g., Multipart Form-Data for image uploads), 
+  all POST, PATCH, and PUT requests expect a JSON payload:
+  Content-Type: application/json
+
+### Standard Response Wrappers
+
+#### Success Response Template
+```json
+{
+  "success": true,
+  "message": "Success message or 'Success' default",
+  "data": { ... } // or [ ... ] or null
+}
+```
+*Note:* Paginated endpoints may also include a "meta" object at the root level:
+```json
+{
+  "success": true,
+  "message": "Success",
+  "data": [ ... ],
+  "meta": {
+    "total": 45,
+    "page": 1,
+    "limit": 20,
+    "pages": 3
+  }
+}
+```
+
+#### Error Response Template
+```json
+{
+  "success": false,
+  "message": "Description of the error",
+  "errors": null // Optional object containing field-specific validation errors (e.g. Zod issues)
+}
+```
+
+-------------------------------------------------------------------------------
+2. DATA MODELS (JSON STRUCTURES)
+-------------------------------------------------------------------------------
+
+#### User
+```json
+{
+  "id": "c8b74b12-9c32-47ef-a0eb-8fcf91280d9a",
+  "email": "user@example.com",
+  "name": "Jane Doe",
+  "age": 28,                  // Int | null
+  "gender": "FEMALE",          // "MALE" | "FEMALE" | "OTHER" | null
+  "heightCm": 168.5,           // Float | null
+  "currentWeightKg": 65.2,     // Float | null
+  "targetWeightKg": 60.0,      // Float | null
+  "goal": "LOSE_WEIGHT",       // "LOSE_WEIGHT" | "MAINTAIN_WEIGHT" | "GAIN_WEIGHT" | "BUILD_MUSCLE" | null
+  "activityLevel": "VERY_ACTIVE", // "SEDENTARY" | "LIGHTLY_ACTIVE" | "MODERATELY_ACTIVE" | "VERY_ACTIVE" | "EXTRA_ACTIVE" | null
+  "dailyCalorieGoal": 1850,    // Int | null
+  "dailyWaterGoalMl": 2000,    // Int
+  "avatarUrl": "https://...",  // String | null
+  "createdAt": "2026-06-27T14:00:00.000Z",
+  "updatedAt": "2026-06-27T14:00:00.000Z"
+}
+```
+
+#### MealEntry
+```json
+{
+  "id": "e4414cb2-6ab5-46ff-b633-8a3fb7eb6a24",
+  "userId": "c8b74b12-9c32-47ef-a0eb-8fcf91280d9a",
+  "name": "Avocado Toast with Egg",
+  "description": "Two slices of sourdough bread with half avocado and two poached eggs",
+  "mealType": "BREAKFAST",     // "BREAKFAST" | "LUNCH" | "DINNER" | "SNACK"
+  "imageUrl": null,            // String | null
+  "calories": 420.0,           // Float
+  "proteinG": 18.0,            // Float
+  "carbsG": 32.0,              // Float
+  "fatG": 22.0,                // Float
+  "fiberG": 8.0,               // Float
+  "sugarG": 3.0,               // Float
+  "sodiumMg": 480.0,           // Float
+  "inputMethod": "text",       // "text" | "image"
+  "aiRaw": { ... },            // Object | null (Raw AI parser JSON response)
+  "loggedAt": "2026-06-27T14:00:00.000Z",
+  "createdAt": "2026-06-27T14:00:00.000Z"
+}
+```
+
+#### WaterLog
+```json
+{
+  "id": "2db4166a-ef9c-4876-804b-cfdb119ad77d",
+  "userId": "c8b74b12-9c32-47ef-a0eb-8fcf91280d9a",
+  "amountMl": 250,
+  "loggedAt": "2026-06-27T14:00:00.000Z"
+}
+```
+
+#### WeightLog
+```json
+{
+  "id": "5aa495bb-dbcb-456d-886f-a887fe7db653",
+  "userId": "c8b74b12-9c32-47ef-a0eb-8fcf91280d9a",
+  "weightKg": 65.2,
+  "note": "Morning weight",     // String | null
+  "loggedAt": "2026-06-27T14:00:00.000Z"
+}
+```
+
+-------------------------------------------------------------------------------
+3. AUTH ROUTES (/auth)
+-------------------------------------------------------------------------------
+
+### POST /auth/register
+*   **Auth Required:** No
+*   **Description:** Creates a new user account.
+*   **Request Body (JSON):**
+    ```json
+    {
+      "name": "Jane Doe",      // String (2-80 characters) - Required
+      "email": "jane@example.com", // String (valid email) - Required
+      "password": "securepassword" // String (8-128 characters) - Required
+    }
+    ```
+*   **Response (201 Created):**
+    ```json
+    {
+      "success": true,
+      "message": "Registration successful",
+      "data": {
+        "user": { <User Model without passwordHash> },
+        "token": "eyJhbGciOiJIUzI1NiIsIn..."
+      }
+    }
+    ```
+
+### POST /auth/login
+*   **Auth Required:** No
+*   **Description:** Authenticates user credentials and generates token.
+*   **Request Body (JSON):**
+    ```json
+    {
+      "email": "jane@example.com", // String (valid email) - Required
+      "password": "securepassword" // String (min 1 character) - Required
+    }
+    ```
+*   **Response (200 OK):**
+    ```json
+    {
+      "success": true,
+      "message": "Login successful",
+      "data": {
+        "user": { <User Model without passwordHash> },
+        "token": "eyJhbGciOiJIUzI1NiIsIn..."
+      }
+    }
+    ```
+
+### GET /auth/me
+*   **Auth Required:** Yes
+*   **Description:** Get profile details of the currently authenticated user.
+*   **Response (200 OK):**
+    ```json
+    {
+      "success": true,
+      "message": "Success",
+      "data": {
+        "user": { <User Model without passwordHash> }
+      }
+    }
+    ```
+
+-------------------------------------------------------------------------------
+4. USER ROUTES (/users)
+-------------------------------------------------------------------------------
+
+### GET /users/profile
+*   **Auth Required:** Yes
+*   **Description:** Get user profile details and computed targets based on physical metrics and goals.
+*   **Response (200 OK):**
+    ```json
+    {
+      "success": true,
+      "message": "Success",
+      "data": {
+        "user": { <User Model> },
+        "targets": {          // null if user profile is incomplete
+          "bmr": 1420,        // BMR in kcal/day (Mifflin-St Jeor formula)
+          "tdee": 1952,       // TDEE in kcal/day based on activity level
+          "calorieGoal": 1452, // Target calorie intake calculated based on goal
+          "proteinG": 109,    // Recommended protein in grams/day
+          "carbsG": 145,      // Recommended carbohydrates in grams/day
+          "fatG": 48          // Recommended fats in grams/day
+        }
+      }
+    }
+    ```
+
+### POST /users/profile OR PATCH /users/profile
+*   **Auth Required:** Yes
+*   **Description:** Update user profile parameters. If profile elements are complete and no custom `dailyCalorieGoal` is provided, the API automatically calculates and updates the `dailyCalorieGoal`.
+*   **Request Body (JSON) - All fields optional:**
+    ```json
+    {
+      "name": "Jane Updated",     // String (2-80)
+      "age": 29,                  // Int (10-120)
+      "gender": "FEMALE",         // "MALE" | "FEMALE" | "OTHER"
+      "heightCm": 169.0,          // Float (50-300)
+      "currentWeightKg": 64.5,    // Float (20-500)
+      "targetWeightKg": 60.0,     // Float (20-500)
+      "goal": "LOSE_WEIGHT",      // "LOSE_WEIGHT" | "MAINTAIN_WEIGHT" | "GAIN_WEIGHT" | "BUILD_MUSCLE"
+      "activityLevel": "VERY_ACTIVE", // "SEDENTARY" | "LIGHTLY_ACTIVE" | "MODERATELY_ACTIVE" | "VERY_ACTIVE" | "EXTRA_ACTIVE"
+      "dailyCalorieGoal": 1800,   // Int (500-10000)
+      "dailyWaterGoalMl": 2500    // Int (500-10000)
+    }
+    ```
+*   **Response (200 OK):**
+    ```json
+    {
+      "success": true,
+      "message": "Profile updated",
+      "data": {
+        "user": { <User Model> },
+        "targets": { <Computed Targets or null> }
+      }
+    }
+    ```
+
+-------------------------------------------------------------------------------
+5. MEAL ROUTES (/meals)
+-------------------------------------------------------------------------------
+
+### POST /meals/text
+*   **Auth Required:** Yes
+*   **Description:** Logs a meal via food description using AI natural language extraction.
+*   **Request Body (JSON):**
+    ```json
+    {
+      "description": "I had a cup of Greek yogurt with handful of blueberries and honey", // String (3-1000) - Required
+      "mealType": "BREAKFAST" // "BREAKFAST" | "LUNCH" | "DINNER" | "SNACK" - Optional (Defaults to AI prediction or SNACK)
+    }
+    ```
+*   **Response (201 Created):**
+    ```json
+    {
+      "success": true,
+      "message": "Meal logged successfully",
+      "data": {
+        "meal": { <MealEntry Model> },
+        "aiConfidence": "high", // "high" | "medium" | "low"
+        "aiNotes": "Estimated calorie breakdown: Yogurt (~150kcal), Blueberries (~50kcal), Honey (~60kcal)" // String | null
+      }
+    }
+    ```
+
+### POST /meals/image
+*   **Auth Required:** Yes
+*   **Description:** Logs a meal using an image file. The backend runs image AI detection, uploads the file to Supabase storage, and creates a meal entry.
+*   **Request Body (Multipart Form-Data):**
+    - `image`: File (image upload file binary) - Required
+*   **Response (201 Created):**
+    ```json
+    {
+      "success": true,
+      "message": "Meal logged from image",
+      "data": {
+        "meal": { <MealEntry Model including imageUrl> },
+        "aiConfidence": "medium",
+        "aiNotes": "Identified grilled chicken breast with broccoli and rice."
+      }
+    }
+    ```
+
+### GET /meals/today
+*   **Auth Required:** Yes
+*   **Description:** Retrieve all meals consumed today (based on local/server date comparison) alongside accumulated macro-nutrients totals.
+*   **Response (200 OK):**
+    ```json
+    {
+      "success": true,
+      "message": "Success",
+      "data": {
+        "meals": [
+          { <MealEntry Model> }
+        ],
+        "totals": {
+          "calories": 420.0,
+          "proteinG": 18.0,
+          "carbsG": 32.0,
+          "fatG": 22.0
+        },
+        "count": 1
+      }
+    }
+    ```
+
+### GET /meals/history
+*   **Auth Required:** Yes
+*   **Description:** Retrieves historical paginated logs of meal entries, optionally filtered within a date range.
+*   **Query Parameters:**
+    - `page`: Int (min 1, defaults to 1)
+    - `limit`: Int (min 1, max 100, defaults to 20)
+    - `startDate`: String (format `YYYY-MM-DD`, optional)
+    - `endDate`: String (format `YYYY-MM-DD`, optional)
+*   **Response (200 OK):**
+    ```json
+    {
+      "success": true,
+      "message": "Success",
+      "data": {
+        "meals": [
+          { <MealEntry Model> }
+        ]
+      },
+      "meta": {
+        "total": 35,
+        "page": 1,
+        "limit": 20,
+        "pages": 2
+      }
+    }
+    ```
+
+### DELETE /meals/:mealId
+*   **Auth Required:** Yes
+*   **Description:** Deletes a specific meal log.
+*   **Path Parameters:**
+    - `mealId`: String (UUID) - Required
+*   **Response (200 OK):**
+    ```json
+    {
+      "success": true,
+      "message": "Meal deleted",
+      "data": null
+    }
+    ```
+
+### PATCH /meals/:mealId
+*   **Auth Required:** Yes
+*   **Description:** Updates a specific meal log.
+*   **Path Parameters:**
+    - `mealId`: String (UUID) - Required
+*   **Request Body (JSON) - All fields optional:**
+    ```json
+    {
+      "name": "Updated name",
+      "calories": 350.0,
+      "proteinG": 15.0,
+      "carbsG": 30.0,
+      "fatG": 18.0,
+      "mealType": "SNACK",
+      "loggedAt": "2026-06-27T14:00:00.000Z"
+    }
+    ```
+*   **Response (200 OK):**
+    ```json
+    {
+      "success": true,
+      "message": "Meal updated",
+      "data": { <MealEntry Model> }
+    }
+    ```
+
+-------------------------------------------------------------------------------
+6. WATER ROUTES (/water)
+-------------------------------------------------------------------------------
+
+### POST /water
+*   **Auth Required:** Yes
+*   **Description:** Log water intake in milliliters.
+*   **Request Body (JSON):**
+    ```json
+    {
+      "amountMl": 250, // Int (50 to 2000) - Required
+      "loggedAt": "2026-06-27T10:30:00.000Z" // String (ISO Date) - Optional (Defaults to current time)
+    }
+    ```
+*   **Response (201 Created):**
+    ```json
+    {
+      "success": true,
+      "message": "Water intake logged",
+      "data": {
+        "log": { <WaterLog Model> }
+      }
+    }
+    ```
+
+### GET /water/today
+*   **Auth Required:** Yes
+*   **Description:** Retrieve water intake log details and goal progress summaries for a specific date (defaults to today).
+*   **Query Parameters:**
+    - `date`: String (format `YYYY-MM-DD`, optional)
+*   **Response (200 OK):**
+    ```json
+    {
+      "success": true,
+      "message": "Success",
+      "data": {
+        "logs": [
+          { <WaterLog Model> }
+        ],
+        "totalMl": 750,
+        "goalMl": 2000,
+        "remaining": 1250,
+        "percentage": 38
+      }
+    }
+    ```
+
+### DELETE /water/:waterId
+*   **Auth Required:** Yes
+*   **Description:** Deletes a specific water log entry.
+*   **Path Parameters:**
+    - `waterId`: String (UUID) - Required
+*   **Response (200 OK):**
+    ```json
+    {
+      "success": true,
+      "message": "Water intake deleted",
+      "data": null
+    }
+    ```
+
+-------------------------------------------------------------------------------
+7. PROGRESS ROUTES (/weight, /calendar)
+-------------------------------------------------------------------------------
+
+### POST /weight
+*   **Auth Required:** Yes
+*   **Description:** Log current weight in kilograms with an optional note.
+*   **Request Body (JSON):**
+    ```json
+    {
+      "weightKg": 65.2, // Float (20 to 500) - Required
+      "note": "Morning weight post run", // String (max 200 characters) - Optional
+      "loggedAt": "2026-06-27T08:00:00.000Z" // String (ISO Date) - Optional (Defaults to current time)
+    }
+    ```
+*   **Response (201 Created):**
+    ```json
+    {
+      "success": true,
+      "message": "Weight logged",
+      "data": {
+        "log": { <WeightLog Model> }
+      }
+    }
+    ```
+
+### GET /weight/history
+*   **Auth Required:** Yes
+*   **Description:** Get historical weight logs paginated.
+*   **Query Parameters:**
+    - `page`: Int (min 1, defaults to 1)
+    - `limit`: Int (min 1, max 100, defaults to 30)
+*   **Response (200 OK):**
+    ```json
+    {
+      "success": true,
+      "message": "Success",
+      "data": {
+        "logs": [
+          { <WeightLog Model> }
+        ]
+      },
+      "meta": {
+        "page": 1,
+        "limit": 30
+      }
+    }
+    ```
+
+### GET /calendar
+*   **Auth Required:** Yes
+*   **Description:** Returns daily summary logs for each day in a selected month, indicating whether calorie/water goals were met.
+*   **Query Parameters:**
+    - `year`: Int (2020-2100, defaults to current year)
+    - `month`: Int (1-12, defaults to current month)
+*   **Response (200 OK):**
+    ```json
+    {
+      "success": true,
+      "message": "Success",
+      "data": {
+        "year": 2026,
+        "month": 6,
+        "days": {
+          "2026-06-26": {
+            "totalCalories": 1820.0,
+            "calorieGoal": 1800,
+            "totalWaterMl": 2200,
+            "waterGoalMl": 2000,
+            "metCalorieGoal": true, // met if totalCalories is 80% to 110% of calorieGoal
+            "metWaterGoal": true   // met if totalWaterMl >= waterGoalMl
+          },
+          "2026-06-27": {
+            "totalCalories": 420.0,
+            "calorieGoal": 1800,
+            "totalWaterMl": 750,
+            "waterGoalMl": 2000,
+            "metCalorieGoal": false,
+            "metWaterGoal": false
+          }
+        }
+      }
+    }
+    ```
+
+-------------------------------------------------------------------------------
+8. AI AGGREGATION ROUTES (/dashboard)
+-------------------------------------------------------------------------------
+
+### GET /dashboard
+*   **Auth Required:** Yes
+*   **Description:** A consolidated, multi-source payload to populate a home page dashboard. Aggregates today's calorie + water summaries, streak data, target calorie/macros, weight, and weekly trend graphs.
+*   **Response (200 OK):**
+    ```json
+    {
+      "success": true,
+      "message": "Success",
+      "data": {
+        "today": {
+          "calories": {
+            "calories": 420.0,
+            "proteinG": 18.0,
+            "carbsG": 32.0,
+            "fatG": 22.0,
+            "fiberG": 8.0,
+            "calorieGoal": 1800,
+            "remaining": 1380.0,
+            "percentage": 23,
+            "mealCount": 1
+          },
+          "water": {
+            "logs": [ { <WaterLog Model> } ],
+            "totalMl": 750,
+            "goalMl": 2000,
+            "remaining": 1250,
+            "percentage": 38
+          }
+        },
+        "streak": 5, // Consecutive days with meal OR water logs
+        "targets": { <Computed Targets or null> },
+        "currentWeightKg": 65.2, // Latest weight log or user profile weight
+        "weekTrend": [
+          {
+            "date": "2026-06-27",
+            "calories": 420.0,
+            "calorieGoal": 1800,
+            "waterMl": 750
+          },
+          {
+            "date": "2026-06-26",
+            "calories": 1820.0,
+            "calorieGoal": 1800,
+            "waterMl": 2200
+          }
+        ],
+        "user": {
+          "name": "Jane Doe",
+          "goal": "LOSE_WEIGHT",
+          "avatarUrl": null
+        }
+      }
+    }
+    ```
+
+-------------------------------------------------------------------------------
+9. UTILITY / HEALTH ROUTES (/health)
+-------------------------------------------------------------------------------
+
+### GET /health
+*   **Auth Required:** No
+*   **Description:** Fast check to ensure the application server is up and running.
+*   **Response (200 OK):**
+    ```json
+    {
+      "status": "ok",
+      "ts": "2026-06-27T13:54:39.123Z"
+    }
+    ```
